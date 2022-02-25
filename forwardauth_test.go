@@ -12,7 +12,9 @@ import (
 
 func TestForwardAuth200(t *testing.T) {
 
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	}))
 	defer s.Close()
 
 	f := ForwardAuth{
