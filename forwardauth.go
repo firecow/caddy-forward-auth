@@ -8,6 +8,7 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"io"
 	"net/http"
+	"time"
 )
 
 func init() {
@@ -28,7 +29,7 @@ func (ForwardAuth) CaddyModule() caddy.ModuleInfo {
 
 func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, next caddyhttp.Handler) error {
 
-	client := http.Client{}
+	client := http.Client{Timeout: 5 * time.Second}
 
 	ssoReq, err := http.NewRequest("GET", f.ForwardAuthUrl, nil)
 	if err != nil {
@@ -39,33 +40,28 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 
 	ssoReq.Header = headerClone
 
-	ssoRes, err := client.Do(ssoReq)
+	ssoW, err := client.Do(ssoReq)
 	if err != nil {
 		return err
 	}
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(ssoRes.Body)
+	defer ssoW.Body.Close()
 
-	if ssoRes.StatusCode == 200 {
+	if ssoW.StatusCode == 200 {
 		return next.ServeHTTP(w, clientReq)
 	}
 
-	w.WriteHeader(ssoRes.StatusCode)
-	err = ssoRes.Header.Write(w)
+	for k, v := range ssoW.Header {
+		for _, v2 := range v {
+			w.Header().Add(k, v2)
+		}
+	}
+	w.WriteHeader(ssoW.StatusCode)
+
+	_, err = io.Copy(w, ssoW.Body)
 	if err != nil {
 		return err
 	}
 
-	_, err = io.Copy(w, ssoRes.Body)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (f *ForwardAuth) Provision(ctx caddy.Context) error {
 	return nil
 }
 
@@ -94,7 +90,6 @@ func (f *ForwardAuth) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 // Interface guards
 var (
-	_ caddy.Provisioner           = (*ForwardAuth)(nil)
 	_ caddy.Validator             = (*ForwardAuth)(nil)
 	_ caddyhttp.MiddlewareHandler = (*ForwardAuth)(nil)
 	_ caddyfile.Unmarshaler       = (*ForwardAuth)(nil)

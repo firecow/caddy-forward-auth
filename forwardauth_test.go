@@ -1,8 +1,10 @@
 package forwardauth
 
 import (
+	"fmt"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/stretchr/testify/assert"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,11 +12,11 @@ import (
 
 func TestForAuth200(t *testing.T) {
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-	defer ts.Close()
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer s.Close()
 
 	f := ForwardAuth{
-		ForwardAuthUrl: ts.URL,
+		ForwardAuthUrl: s.URL,
 	}
 
 	nextCalled := false
@@ -30,17 +32,18 @@ func TestForAuth200(t *testing.T) {
 }
 
 func TestForNot200(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "text/html")
 		w.WriteHeader(401)
-		_, err := w.Write([]byte("I couldn't find correct cookie or authorization headers"))
+		_, err := fmt.Fprint(w, "I couldn't find correct cookie or authorization headers")
 		if err != nil {
 			t.Fatal(err)
 		}
 	}))
-	defer ts.Close()
+	defer s.Close()
 
 	f := ForwardAuth{
-		ForwardAuthUrl: ts.URL,
+		ForwardAuthUrl: s.URL,
 	}
 
 	nextCalled := false
@@ -54,7 +57,9 @@ func TestForNot200(t *testing.T) {
 	assert.Nil(t, err, err)
 	assert.Equal(t, false, nextCalled, "Next was called, but it should not have been called")
 
-	//result, err := io.ReadAll(w.Result().Body)
-	assert.Equal(t, w.Result().StatusCode, 401)
-	//assert.Equal(t, "I couldn't find correct cookie or authorization headers", string(result))
+	result := w.Result()
+	body, err := io.ReadAll(result.Body)
+	assert.Equal(t, result.StatusCode, 401)
+	assert.Equal(t, "text/html", result.Header.Get("content-type"))
+	assert.Equal(t, "I couldn't find correct cookie or authorization headers", string(body))
 }
