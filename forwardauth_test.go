@@ -4,21 +4,19 @@ import (
 	"fmt"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-func TestForAuth200(t *testing.T) {
+func TestForwardAuth200(t *testing.T) {
 
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	defer s.Close()
 
 	f := ForwardAuth{
-		Url:    s.URL,
-		logger: zap.New(nil),
+		Url: s.URL,
 	}
 
 	nextCalled := false
@@ -33,10 +31,18 @@ func TestForAuth200(t *testing.T) {
 	assert.Equal(t, true, nextCalled, "Next was not called")
 }
 
-func TestForNot200(t *testing.T) {
-	// ssoReqHostHeader := ""
+func TestForwardAuthNot200WithHostHeader(t *testing.T) {
+	ForwardAuthNot200WithHostHeader(t, "somewhereovertherainbox.com", "somewhereovertherainbox.com")
+}
+
+func TestForwardAuthNot200WithoutHostHeader(t *testing.T) {
+	ForwardAuthNot200WithHostHeader(t, "", "localhost")
+}
+
+func ForwardAuthNot200WithHostHeader(t *testing.T, hostHeader string, hostHeaderExpected string) {
+	ssoReqHostHeader := ""
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// ssoReqHostHeader = r.Header.Get("x-forwarded-host")
+		ssoReqHostHeader = r.Header.Get("x-forwarded-host")
 
 		w.Header().Add("content-type", "text/html")
 		w.WriteHeader(401)
@@ -48,19 +54,21 @@ func TestForNot200(t *testing.T) {
 	defer s.Close()
 
 	f := ForwardAuth{
-		Url:    s.URL,
-		logger: zap.New(nil),
+		Url: s.URL,
 	}
 
 	nextCalled := false
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "localhost:80/path", nil)
+	req := httptest.NewRequest("GET", "http://localhost/path", nil)
+	if hostHeader != "" {
+		req.Header.Set("host", hostHeader)
+	}
 	err := f.ServeHTTP(w, req, caddyhttp.HandlerFunc(func(w http.ResponseWriter, r *http.Request) error {
 		nextCalled = true
 		return nil
 	}))
 
-	// assert.Equal(t, "localhost:80", ssoReqHostHeader, err)
+	assert.Equal(t, hostHeaderExpected, ssoReqHostHeader, err)
 	assert.Nil(t, err, err)
 	assert.Equal(t, false, nextCalled, "Next was called, but it should not have been called")
 

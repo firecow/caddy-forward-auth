@@ -1,12 +1,13 @@
 package forwardauth
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"go.uber.org/zap"
+	"github.com/go-resty/resty/v2"
 	"io"
 	"net/http"
 	"time"
@@ -19,8 +20,6 @@ func init() {
 
 type ForwardAuth struct {
 	Url string `json:"url"`
-
-	logger *zap.Logger
 }
 
 func (ForwardAuth) CaddyModule() caddy.ModuleInfo {
@@ -30,54 +29,48 @@ func (ForwardAuth) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision sets up RequestDebugger.
-func (f *ForwardAuth) Provision(ctx caddy.Context) error {
-	f.logger = ctx.Logger(f)
-	return nil
-}
-
 func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, next caddyhttp.Handler) error {
-
-	client := http.Client{Timeout: 5 * time.Second}
-
-	ssoReq, err := http.NewRequest("GET", f.Url, nil)
+	authReq := resty.New()
+	authReq.SetTimeout(5 * time.Second)
+	authReq.SetRedirectPolicy(resty.NoRedirectPolicy())
+	authReqHeaders := map[string]string{}
+	for k, v := range clientReq.Header {
+		for _, v2 := range v {
+			authReqHeaders[k] = v2
+		}
+	}
+	authReqHeaders["x-forwarded-method"] = clientReq.Method
+	authReqHeaders["x-forwarded-proto"] = clientReq.Proto
+	authReqHeaders["x-forwarded-uri"] = clientReq.RequestURI
+	authReqHeaders["x-forwarded-host"] = authReqHeaders["x-forwarded-host"]
+	delete(authReqHeaders, "host")
+	// if x-forwarded-host was unset use host header
+	if authReqHeaders["x-forwarded-host"] == "" {
+		authReqHeaders["x-forwarded-host"] = clientReq.Header.Get("host")
+	}
+	// if x-forwarded-host was unset use regular host field
+	if authReqHeaders["x-forwarded-host"] == "" {
+		authReqHeaders["x-forwarded-host"] = clientReq.Host
+	}
+	authResp, err := authReq.R().SetHeaders(authReqHeaders).Get(f.Url)
 	if err != nil {
 		return err
 	}
 
-	ssoReq.Header = clientReq.Header.Clone()
-	ssoReq.Header.Set("x-forwarded-method", clientReq.Method)
-	ssoReq.Header.Set("x-forwarded-proto", clientReq.Proto)
-	ssoReq.Header.Set("x-forwarded-host", clientReq.Host)
-	ssoReq.Header.Set("x-forwarded-uri", clientReq.RequestURI)
-	ssoReq.Header.Del("host")
-
-	f.logger.Info("ssoReq.Header",
-		zap.Any("ssoReq.x-forwarded-method", ssoReq.Header.Get("x-forwarded-method")),
-		zap.Any("ssoReq.x-forwarded-proto", ssoReq.Header.Get("x-forwarded-proto")),
-		zap.Any("ssoReq.x-forwarded-host", ssoReq.Header.Get("x-forwarded-host")),
-		zap.Any("ssoReq.x-forwarded-uri", ssoReq.Header.Get("x-forwarded-uri")),
-	)
-
-	ssoW, err := client.Do(ssoReq)
-	if err != nil {
-		return err
-	}
-	defer ssoW.Body.Close()
-
-	if ssoW.StatusCode == 200 {
+	authRespStatusCode := authResp.StatusCode()
+	if authRespStatusCode == 200 {
+		clientReq.Header.Set("x-forwarded-host", authReqHeaders["x-forwarded-host"])
 		return next.ServeHTTP(w, clientReq)
 	}
 
-	for k, v := range ssoW.Header {
+	// if forward auth "fails" pass auth header and auth body to original response writer
+	for k, v := range authResp.Header() {
 		for _, v2 := range v {
 			w.Header().Add(k, v2)
 		}
 	}
-	clientReq.Header.Set("x-forwarded-host", clientReq.Header.Get("host"))
-	w.WriteHeader(ssoW.StatusCode)
-
-	_, err = io.Copy(w, ssoW.Body)
+	w.WriteHeader(authRespStatusCode)
+	_, err = io.Copy(w, bytes.NewReader(authResp.Body()))
 	if err != nil {
 		return err
 	}

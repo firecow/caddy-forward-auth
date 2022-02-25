@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+mkdir -p .gocache
+docker run -e XDG_CONFIG_HOME=/tmp/ -e GOCACHE=/app/.gocache -p 8085:80 --rm -it -u "$(id -u):$(id -g)" -v "$PWD:/app/" -w /app/ caddy:2.4.6-builder sh
