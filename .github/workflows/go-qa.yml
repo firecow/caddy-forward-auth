@@ -1,4 +1,4 @@
-name: Github Actions
+name: build
 on:
   push:
     tags-ignore:
