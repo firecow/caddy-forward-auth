@@ -32,8 +32,11 @@ func TestForAuth200(t *testing.T) {
 }
 
 func TestForNot200(t *testing.T) {
+	// ssoReqHostHeader := ""
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "text/html")
+		// ssoReqHostHeader = r.Header.Get("x-forwarded-host")
+
+		w.Header().Add("content-type", "text/html")
 		w.WriteHeader(401)
 		_, err := fmt.Fprint(w, "I couldn't find correct cookie or authorization headers")
 		if err != nil {
@@ -48,12 +51,13 @@ func TestForNot200(t *testing.T) {
 
 	nextCalled := false
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "localhost:80", nil)
-	err := f.ServeHTTP(w, req, caddyhttp.HandlerFunc(func(http.ResponseWriter, *http.Request) error {
+	req := httptest.NewRequest("GET", "localhost:80/path", nil)
+	err := f.ServeHTTP(w, req, caddyhttp.HandlerFunc(func(w http.ResponseWriter, r *http.Request) error {
 		nextCalled = true
 		return nil
 	}))
 
+	// assert.Equal(t, "localhost:80", ssoReqHostHeader, err)
 	assert.Nil(t, err, err)
 	assert.Equal(t, false, nextCalled, "Next was called, but it should not have been called")
 

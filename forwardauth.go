@@ -35,10 +35,13 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 	if err != nil {
 		return err
 	}
-	headerClone := clientReq.Header.Clone()
-	clientReq.Header.Del("host")
 
-	ssoReq.Header = headerClone
+	ssoReq.Header = clientReq.Header.Clone()
+	ssoReq.Header.Set("x-forwarded-method", clientReq.Method)
+	ssoReq.Header.Set("x-forwarded-proto", clientReq.Proto)
+	ssoReq.Header.Set("x-forwarded-host", clientReq.Host)
+	ssoReq.Header.Set("x-forwarded-uri", clientReq.URL.Path)
+	ssoReq.Header.Del("host")
 
 	ssoW, err := client.Do(ssoReq)
 	if err != nil {
@@ -55,6 +58,7 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 			w.Header().Add(k, v2)
 		}
 	}
+	clientReq.Header.Set("x-forwarded-host", clientReq.Header.Get("host"))
 	w.WriteHeader(ssoW.StatusCode)
 
 	_, err = io.Copy(w, ssoW.Body)
