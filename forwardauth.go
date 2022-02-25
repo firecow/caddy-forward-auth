@@ -42,7 +42,7 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 	authReqHeaders["x-forwarded-method"] = clientReq.Method
 	authReqHeaders["x-forwarded-proto"] = clientReq.Proto
 	authReqHeaders["x-forwarded-uri"] = clientReq.RequestURI
-	authReqHeaders["x-forwarded-host"] = authReqHeaders["x-forwarded-host"]
+	authReqHeaders["x-forwarded-host"] = clientReq.Header.Get("x-forwarded-host")
 	delete(authReqHeaders, "host")
 	// if x-forwarded-host was unset use host header
 	if authReqHeaders["x-forwarded-host"] == "" {
