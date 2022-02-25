@@ -13,7 +13,7 @@ import (
 
 func init() {
 	caddy.RegisterModule(ForwardAuth{})
-	httpcaddyfile.RegisterHandlerDirective("forwardAuth", parseCaddyfile)
+	httpcaddyfile.RegisterHandlerDirective("forward_auth", parseCaddyfile)
 }
 
 type ForwardAuth struct {
@@ -22,7 +22,7 @@ type ForwardAuth struct {
 
 func (ForwardAuth) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "caddy.http.handlers.forwardauth",
+		ID:  "caddy.http.handlers.forward_auth",
 		New: func() caddy.Module { return new(ForwardAuth) },
 	}
 }
