@@ -1,5 +1,0 @@
-
-
-route {
-    forward_auth https://sso.cego.dk/auth 2nd 3rd
-}
