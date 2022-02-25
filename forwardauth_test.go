@@ -21,12 +21,13 @@ func TestForwardAuth200(t *testing.T) {
 
 	nextCalled := false
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "localhost:80", nil)
+	req := httptest.NewRequest("GET", "http://localhost/somepath", nil)
 	err := f.ServeHTTP(w, req, caddyhttp.HandlerFunc(func(http.ResponseWriter, *http.Request) error {
 		nextCalled = true
 		return nil
 	}))
 
+	assert.Equal(t, "localhost", w.Header().Get("x-forwarded-host"))
 	assert.Nil(t, err, "ServeHTTP has error")
 	assert.Equal(t, true, nextCalled, "Next was not called")
 }
