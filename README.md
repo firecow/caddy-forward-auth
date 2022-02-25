@@ -6,7 +6,7 @@ Forward auth middleware for caddyserver
 [![License](https://img.shields.io/github/license/firecow/gitlab-ci-local)](https://github.com/firecow/caddy-forward-auth)
 [![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://renovatebot.com)
 
-```
+```caddyfile
 :80
 
 route * {
