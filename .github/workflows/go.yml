@@ -1,0 +1,22 @@
+name: Build and test Go
+on: [ push, pull_request ]
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ 1.16.x, 1.17.x ]
+    steps:
+      - uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Check out source code
+        uses: actions/checkout@v1
+
+      - name: go build
+        run: go build .
+
+      - name: go test
+        run: go test -v .
