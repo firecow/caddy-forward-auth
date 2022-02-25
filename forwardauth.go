@@ -22,7 +22,7 @@ type ForwardAuth struct {
 
 func (ForwardAuth) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "caddy.http.handlers.forward_auth",
+		ID:  "http.handlers.forward_auth",
 		New: func() caddy.Module { return new(ForwardAuth) },
 	}
 }
