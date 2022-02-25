@@ -17,7 +17,7 @@ func init() {
 }
 
 type ForwardAuth struct {
-	ForwardAuthUrl string `json:"forwardAuthUrl"`
+	Url string `json:"url"`
 }
 
 func (ForwardAuth) CaddyModule() caddy.ModuleInfo {
@@ -31,7 +31,7 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 
 	client := http.Client{Timeout: 5 * time.Second}
 
-	ssoReq, err := http.NewRequest("GET", f.ForwardAuthUrl, nil)
+	ssoReq, err := http.NewRequest("GET", f.Url, nil)
 	if err != nil {
 		return err
 	}
@@ -66,13 +66,12 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 }
 
 func (f *ForwardAuth) Validate() error {
-	if f.ForwardAuthUrl == "" {
-		return fmt.Errorf("no forward auth url specified")
+	if f.Url == "" {
+		return fmt.Errorf("forward_auth <url> not specified")
 	}
 	return nil
 }
 
-// parseCaddyfile unmarshals tokens from h into a new Middleware.
 func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
 	var m ForwardAuth
 	err := m.UnmarshalCaddyfile(h.Dispenser)
@@ -81,7 +80,7 @@ func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error)
 
 func (f *ForwardAuth) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
-		if !d.Args(&f.ForwardAuthUrl) {
+		if !d.Args(&f.Url) {
 			return d.ArgErr()
 		}
 	}
@@ -92,5 +91,4 @@ func (f *ForwardAuth) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 var (
 	_ caddy.Validator             = (*ForwardAuth)(nil)
 	_ caddyhttp.MiddlewareHandler = (*ForwardAuth)(nil)
-	_ caddyfile.Unmarshaler       = (*ForwardAuth)(nil)
 )

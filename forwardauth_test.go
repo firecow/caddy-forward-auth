@@ -16,7 +16,7 @@ func TestForAuth200(t *testing.T) {
 	defer s.Close()
 
 	f := ForwardAuth{
-		ForwardAuthUrl: s.URL,
+		Url: s.URL,
 	}
 
 	nextCalled := false
@@ -43,7 +43,7 @@ func TestForNot200(t *testing.T) {
 	defer s.Close()
 
 	f := ForwardAuth{
-		ForwardAuthUrl: s.URL,
+		Url: s.URL,
 	}
 
 	nextCalled := false
