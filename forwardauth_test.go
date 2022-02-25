@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,7 +17,8 @@ func TestForAuth200(t *testing.T) {
 	defer s.Close()
 
 	f := ForwardAuth{
-		Url: s.URL,
+		Url:    s.URL,
+		logger: zap.New(nil),
 	}
 
 	nextCalled := false
@@ -46,7 +48,8 @@ func TestForNot200(t *testing.T) {
 	defer s.Close()
 
 	f := ForwardAuth{
-		Url: s.URL,
+		Url:    s.URL,
+		logger: zap.New(nil),
 	}
 
 	nextCalled := false
