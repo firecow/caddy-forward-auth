@@ -27,7 +27,7 @@ func TestForwardAuth200(t *testing.T) {
 		return nil
 	}))
 
-	assert.Equal(t, "localhost", w.Header().Get("x-forwarded-host"))
+	assert.Equal(t, "localhost", req.Header.Get("x-forwarded-host"))
 	assert.Nil(t, err, "ServeHTTP has error")
 	assert.Equal(t, true, nextCalled, "Next was not called")
 }

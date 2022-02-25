@@ -59,7 +59,7 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 
 	authRespStatusCode := authResp.StatusCode()
 	if authRespStatusCode == 200 {
-		w.Header().Set("x-forwarded-host", authReqHeaders["x-forwarded-host"])
+		clientReq.Header.Set("x-forwarded-host", authReqHeaders["x-forwarded-host"])
 		return next.ServeHTTP(w, clientReq)
 	}
 
