@@ -1,14 +1,12 @@
 package forwardauth
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/go-resty/resty/v2"
-	"io"
 	"net/http"
 	"time"
 )
@@ -19,7 +17,8 @@ func init() {
 }
 
 type ForwardAuth struct {
-	Url string `json:"url"`
+	Url                        string   `json:"url"`
+	AuthResponseForwardHeaders []string `json:"auth_response_forward_headers"`
 }
 
 func (ForwardAuth) CaddyModule() caddy.ModuleInfo {
@@ -57,6 +56,12 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 
 	authRespStatusCode := authResp.StatusCode()
 	if authRespStatusCode == 200 {
+		for _, v := range f.AuthResponseForwardHeaders {
+			authRespForwardHeader := authResp.Header().Get(v)
+			if authRespForwardHeader != "" {
+				clientReq.Header.Set(v, authRespForwardHeader)
+			}
+		}
 		clientReq.Header.Set("x-forwarded-host", authReqHeaders["x-forwarded-host"])
 		return next.ServeHTTP(w, clientReq)
 	}
@@ -68,7 +73,7 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 		}
 	}
 	w.WriteHeader(authRespStatusCode)
-	_, err = io.Copy(w, bytes.NewReader(authResp.Body()))
+	_, err = w.Write(authResp.Body())
 	if err != nil {
 		return err
 	}
@@ -84,9 +89,21 @@ func (f *ForwardAuth) Validate() error {
 }
 
 func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
-	var m ForwardAuth
-	err := m.UnmarshalCaddyfile(h.Dispenser)
-	return m, err
+	var f ForwardAuth
+	err := f.UnmarshalCaddyfile(h.Dispenser)
+
+	if f.AuthResponseForwardHeaders == nil {
+		// TODO: Make it possible to specify these via Caddyfile param
+		f.AuthResponseForwardHeaders = append(f.AuthResponseForwardHeaders, "x-remote-user-uuid")
+		f.AuthResponseForwardHeaders = append(f.AuthResponseForwardHeaders, "remote-user-uuid")
+		f.AuthResponseForwardHeaders = append(f.AuthResponseForwardHeaders, "x-remote-user-id")
+		f.AuthResponseForwardHeaders = append(f.AuthResponseForwardHeaders, "remote-user-id")
+		f.AuthResponseForwardHeaders = append(f.AuthResponseForwardHeaders, "x-remote-user")
+		f.AuthResponseForwardHeaders = append(f.AuthResponseForwardHeaders, "remote-user")
+		f.AuthResponseForwardHeaders = append(f.AuthResponseForwardHeaders, "authorization")
+	}
+
+	return f, err
 }
 
 func (f *ForwardAuth) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {

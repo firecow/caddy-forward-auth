@@ -13,12 +13,14 @@ import (
 func TestForwardAuth200(t *testing.T) {
 
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("remote-user", "mynameisslimshady")
 		w.WriteHeader(200)
 	}))
 	defer s.Close()
 
 	f := ForwardAuth{
-		Url: s.URL,
+		Url:                        s.URL,
+		AuthResponseForwardHeaders: []string{"remote-user"},
 	}
 
 	nextCalled := false
@@ -30,6 +32,7 @@ func TestForwardAuth200(t *testing.T) {
 	}))
 
 	assert.Equal(t, "localhost", req.Header.Get("x-forwarded-host"))
+	assert.Equal(t, "mynameisslimshady", req.Header.Get("remote-user"))
 	assert.Nil(t, err, "ServeHTTP has error")
 	assert.Equal(t, true, nextCalled, "Next was not called")
 }
@@ -47,7 +50,7 @@ func ForwardAuthNot200WithHostHeader(t *testing.T, hostHeader string, hostHeader
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ssoReqHostHeader = r.Header.Get("x-forwarded-host")
 
-		w.Header().Add("content-type", "text/html")
+		w.Header().Set("content-type", "text/html")
 		w.WriteHeader(401)
 		_, err := fmt.Fprint(w, "I couldn't find correct cookie or authorization headers")
 		if err != nil {
