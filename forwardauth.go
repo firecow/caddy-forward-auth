@@ -41,19 +41,21 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 	authReqHeaders["x-forwarded-method"] = clientReq.Method
 	authReqHeaders["x-forwarded-proto"] = clientReq.Proto
 	authReqHeaders["x-forwarded-uri"] = clientReq.RequestURI
-	authReqHeaders["x-forwarded-host"] = clientReq.Header.Get("x-forwarded-host")
-	if authReqHeaders["x-forwarded-host"] == "" {
-		authReqHeaders["x-forwarded-host"] = clientReq.Header.Get("host")
+	const xForwardedHost = "x-forwarded-host"
+	authReqHeaders[xForwardedHost] = clientReq.Header.Get(xForwardedHost)
+	if authReqHeaders[xForwardedHost] == "" {
+		authReqHeaders[xForwardedHost] = clientReq.Header.Get("host")
 	}
-	if authReqHeaders["x-forwarded-host"] == "" {
-		authReqHeaders["x-forwarded-host"] = clientReq.Host
+	if authReqHeaders[xForwardedHost] == "" {
+		authReqHeaders[xForwardedHost] = clientReq.Host
 	}
-	authReqHeaders["x-forwarded-for"] = clientReq.Header.Get("cf-connecting-ip")
-	if authReqHeaders["x-forwarded-for"] == "" {
-		authReqHeaders["x-forwarded-for"] = clientReq.Header.Get("x-forwarded-for")
+	const xForwardedFor = "x-forwarded-for"
+	authReqHeaders[xForwardedFor] = clientReq.Header.Get("cf-connecting-ip")
+	if authReqHeaders[xForwardedFor] == "" {
+		authReqHeaders[xForwardedFor] = clientReq.Header.Get(xForwardedFor)
 	}
-	if authReqHeaders["x-forwarded-for"] == "" {
-		authReqHeaders["x-forwarded-for"] = clientReq.RemoteAddr
+	if authReqHeaders[xForwardedFor] == "" {
+		authReqHeaders[xForwardedFor] = clientReq.RemoteAddr
 	}
 	delete(authReqHeaders, "host")
 	authResp, err := authReq.R().SetHeaders(authReqHeaders).Get(f.Url)
@@ -69,7 +71,7 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 				clientReq.Header.Set(v, authRespForwardHeader)
 			}
 		}
-		clientReq.Header.Set("x-forwarded-host", authReqHeaders["x-forwarded-host"])
+		clientReq.Header.Set(xForwardedHost, authReqHeaders[xForwardedHost])
 		return next.ServeHTTP(w, clientReq)
 	}
 
