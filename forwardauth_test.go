@@ -13,6 +13,8 @@ import (
 func TestForwardAuth200(t *testing.T) {
 
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Log(r.Header.Get("x-forwarded-for"))
+
 		w.Header().Set("remote-user", "mynameisslimshady")
 		w.WriteHeader(200)
 	}))
