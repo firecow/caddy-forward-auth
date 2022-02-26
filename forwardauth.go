@@ -50,6 +50,9 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 	}
 	authReqHeaders["x-forwarded-for"] = clientReq.Header.Get("cf-connecting-ip")
 	if authReqHeaders["x-forwarded-for"] == "" {
+		authReqHeaders["x-forwarded-for"] = clientReq.Header.Get("x-forwarded-for")
+	}
+	if authReqHeaders["x-forwarded-for"] == "" {
 		authReqHeaders["x-forwarded-for"] = clientReq.RemoteAddr
 	}
 	delete(authReqHeaders, "host")
