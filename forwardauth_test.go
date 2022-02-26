@@ -3,6 +3,7 @@ package forwardauth
 import (
 	"fmt"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -23,6 +24,7 @@ func TestForwardAuth200(t *testing.T) {
 	f := ForwardAuth{
 		Url:                        s.URL,
 		AuthResponseForwardHeaders: []string{"remote-user"},
+		restyClient:                resty.New(),
 	}
 
 	nextCalled := false
@@ -62,7 +64,8 @@ func ForwardAuthNot200WithHostHeader(t *testing.T, hostHeader string, hostHeader
 	defer s.Close()
 
 	f := ForwardAuth{
-		Url: s.URL,
+		Url:         s.URL,
+		restyClient: resty.New(),
 	}
 
 	nextCalled := false

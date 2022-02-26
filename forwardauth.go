@@ -19,6 +19,8 @@ func init() {
 type ForwardAuth struct {
 	Url                        string   `json:"url"`
 	AuthResponseForwardHeaders []string `json:"auth_response_forward_headers"`
+
+	restyClient *resty.Client
 }
 
 func (ForwardAuth) CaddyModule() caddy.ModuleInfo {
@@ -28,10 +30,16 @@ func (ForwardAuth) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+// Provision implements caddy.Provisioner.
+func (f *ForwardAuth) Provision() error {
+	f.restyClient = resty.New()
+	f.restyClient.SetTimeout(5 * time.Second)
+	f.restyClient.SetRedirectPolicy(resty.NoRedirectPolicy())
+	return nil
+}
+
 func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, next caddyhttp.Handler) error {
-	authReq := resty.New()
-	authReq.SetTimeout(5 * time.Second)
-	authReq.SetRedirectPolicy(resty.NoRedirectPolicy())
+
 	authReqHeaders := map[string]string{}
 	for k, v := range clientReq.Header {
 		for _, v2 := range v {
@@ -46,7 +54,7 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 	authReqHeaders["x-forwarded-host"] = derivedXForwardedHost
 	authReqHeaders["x-forwarded-for"] = derivedXForwardedFor
 	delete(authReqHeaders, "host")
-	authResp, err := authReq.R().SetHeaders(authReqHeaders).Get(f.Url)
+	authResp, err := f.restyClient.R().SetHeaders(authReqHeaders).Get(f.Url)
 	if err != nil {
 		return err
 	}
