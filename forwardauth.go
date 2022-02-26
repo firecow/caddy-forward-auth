@@ -38,25 +38,13 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 			authReqHeaders[k] = v2
 		}
 	}
+	derivedXForwardedHost := DeriveXForwardedHost(clientReq)
+	derivedXForwardedFor := DeriveXForwardedFor(clientReq)
 	authReqHeaders["x-forwarded-method"] = clientReq.Method
 	authReqHeaders["x-forwarded-proto"] = clientReq.Proto
 	authReqHeaders["x-forwarded-uri"] = clientReq.RequestURI
-	const xForwardedHost = "x-forwarded-host"
-	authReqHeaders[xForwardedHost] = clientReq.Header.Get(xForwardedHost)
-	if authReqHeaders[xForwardedHost] == "" {
-		authReqHeaders[xForwardedHost] = clientReq.Header.Get("host")
-	}
-	if authReqHeaders[xForwardedHost] == "" {
-		authReqHeaders[xForwardedHost] = clientReq.Host
-	}
-	const xForwardedFor = "x-forwarded-for"
-	authReqHeaders[xForwardedFor] = clientReq.Header.Get("cf-connecting-ip")
-	if authReqHeaders[xForwardedFor] == "" {
-		authReqHeaders[xForwardedFor] = clientReq.Header.Get(xForwardedFor)
-	}
-	if authReqHeaders[xForwardedFor] == "" {
-		authReqHeaders[xForwardedFor] = clientReq.RemoteAddr
-	}
+	authReqHeaders["x-forwarded-host"] = derivedXForwardedHost
+	authReqHeaders["x-forwarded-for"] = derivedXForwardedFor
 	delete(authReqHeaders, "host")
 	authResp, err := authReq.R().SetHeaders(authReqHeaders).Get(f.Url)
 	if err != nil {
@@ -71,7 +59,7 @@ func (f ForwardAuth) ServeHTTP(w http.ResponseWriter, clientReq *http.Request, n
 				clientReq.Header.Set(v, authRespForwardHeader)
 			}
 		}
-		clientReq.Header.Set(xForwardedHost, authReqHeaders[xForwardedHost])
+		clientReq.Header.Set("x-forwarded-host", derivedXForwardedHost)
 		return next.ServeHTTP(w, clientReq)
 	}
 
@@ -122,6 +110,30 @@ func (f *ForwardAuth) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		}
 	}
 	return nil
+}
+
+func DeriveXForwardedFor(clientReq *http.Request) string {
+	var xForwardedFor string
+	xForwardedFor = clientReq.Header.Get("cf-connecting-ip")
+	if xForwardedFor == "" {
+		xForwardedFor = clientReq.Header.Get("x-forwarded-for")
+	}
+	if xForwardedFor == "" {
+		xForwardedFor = clientReq.RemoteAddr
+	}
+	return xForwardedFor
+}
+
+func DeriveXForwardedHost(clientReq *http.Request) string {
+	var xForwardedHost string
+	xForwardedHost = clientReq.Header.Get("x-forwarded-host")
+	if xForwardedHost == "" {
+		xForwardedHost = clientReq.Header.Get("host")
+	}
+	if xForwardedHost == "" {
+		xForwardedHost = clientReq.Host
+	}
+	return xForwardedHost
 }
 
 // Interface guards
