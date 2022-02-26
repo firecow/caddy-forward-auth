@@ -24,11 +24,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: checkout source code
+      - name: Checkout source code
         uses: actions/checkout@v2
 
-      - name: go build
+      - name: Go build
         run: go build .
 
-      - name: go test
+      - name: Go test
         run: go test -v .
