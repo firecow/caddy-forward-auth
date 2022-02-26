@@ -34,10 +34,10 @@ func TestForwardAuth200(t *testing.T) {
 		nextCalled = true
 		return nil
 	}))
+	assert.Nil(t, err)
 
 	assert.Equal(t, "localhost", req.Header.Get("x-forwarded-host"))
 	assert.Equal(t, "mynameisslimshady", req.Header.Get("remote-user"))
-	assert.Nil(t, err, "ServeHTTP has error")
 	assert.Equal(t, true, nextCalled, "Next was not called")
 }
 
@@ -79,9 +79,9 @@ func ForwardAuthNot200WithHostHeader(t *testing.T, hostHeader string, hostHeader
 		return nil
 	}))
 
-	assert.Equal(t, hostHeaderExpected, ssoReqHostHeader, err)
 	assert.Nil(t, err, err)
-	assert.Equal(t, false, nextCalled, "Next was called, but it should not have been called")
+	assert.Equal(t, hostHeaderExpected, ssoReqHostHeader)
+	assert.Equal(t, false, nextCalled)
 
 	result := w.Result()
 	body, err := io.ReadAll(result.Body)

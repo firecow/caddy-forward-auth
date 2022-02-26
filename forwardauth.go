@@ -30,11 +30,11 @@ func (ForwardAuth) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision implements caddy.Provisioner.
-func (f *ForwardAuth) Provision() error {
+func (f *ForwardAuth) Provision(_ caddy.Context) error {
 	f.restyClient = resty.New()
 	f.restyClient.SetTimeout(5 * time.Second)
 	f.restyClient.SetRedirectPolicy(resty.NoRedirectPolicy())
+
 	return nil
 }
 
@@ -148,4 +148,5 @@ func DeriveXForwardedHost(clientReq *http.Request) string {
 var (
 	_ caddy.Validator             = (*ForwardAuth)(nil)
 	_ caddyhttp.MiddlewareHandler = (*ForwardAuth)(nil)
+	_ caddy.Provisioner           = (*ForwardAuth)(nil)
 )
