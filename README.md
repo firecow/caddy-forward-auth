@@ -6,27 +6,11 @@ This is now possible directly in Caddy 2.5.1
 :80
 
 route {
-    reverse_proxy https://sso.firecow.dk {
-        method GET
-        rewrite /auth
-
-        header_up Host {upstream_host}
-        header_up X-Forwarded-Method {method}
-        header_up X-Forwarded-Uri {uri}
-        header_up X-Forwarded-Proto {header.X-Forwarded-Proto}
-
-        @good status 2xx
-        handle_response @good {
-            request_header Remote-User {rp.header.Remote-User}
-            request_header Authorization {rp.header.Authorization}       
-        }
-        handle_response {
-            copy_response_headers {
-                exclude Connection Keep-Alive Te Trailers Transfer-Encoding Upgrade
-            }
-            copy_response
-        }
-    }
+    forward_auth https://sso.firecow.dk {
+	    header_up Host {upstream_hostport}
+	    uri /auth
+	    copy_headers Remote-User Authorization
+    }    
     reverse_proxy http://webserver:8080
 }
 ```
