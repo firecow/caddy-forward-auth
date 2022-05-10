@@ -1,4 +1,39 @@
 # caddy-forward-auth
+
+!!!!! DISCONTINUED !!!!!
+This is now possible directly in Caddy 2.5.1
+```
+:80
+
+route {
+    reverse_proxy https://sso.firecow.dk {
+        method GET
+        rewrite /auth
+
+        header_up Host {upstream_host}
+        header_up X-Forwarded-Method {method}
+        header_up X-Forwarded-Uri {uri}
+        header_up X-Forwarded-Proto {header.X-Forwarded-Proto}
+
+        @good status 2xx
+        handle_response @good {
+            request_header Remote-User {rp.header.Remote-User}
+            request_header Remote-User-Uuid {rp.header.Remote-User-Uuid}
+            request_header Authorization {rp.header.Authorization}
+            request_header X-Forwarded-Proto https            
+        }
+        handle_response {
+            copy_response_headers {
+                exclude Connection Keep-Alive Te Trailers Transfer-Encoding Upgrade
+            }
+            copy_response
+        }
+    }
+    reverse_proxy http://webserver:8080
+}
+```
+
+
 Forward auth middleware for caddyserver
 
 Rougly based on https://doc.traefik.io/traefik/middlewares/http/forwardauth/
