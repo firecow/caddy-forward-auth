@@ -18,9 +18,7 @@ route {
         @good status 2xx
         handle_response @good {
             request_header Remote-User {rp.header.Remote-User}
-            request_header Remote-User-Uuid {rp.header.Remote-User-Uuid}
-            request_header Authorization {rp.header.Authorization}
-            request_header X-Forwarded-Proto https            
+            request_header Authorization {rp.header.Authorization}       
         }
         handle_response {
             copy_response_headers {
